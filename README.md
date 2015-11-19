@@ -14,17 +14,17 @@ Before doing anything, go ahead and install [node-js](https://nodejs.org/).
 
 Now clone the project
 
-1. `git clone git@github.com:jltmtz/efros-and-leung-js.git`
-2. `cd js`
+* `git clone git@github.com:jltmtz/efros-and-leung-js.git`
+* `cd js`
 
 Install the dependencies
 
-3. `npm install -i ndarray`
-4. `npm install -i raphael`
+* `npm install -i ndarray`
+* `npm install -i raphael`
 
 Finally, export it with [browserify](http://browserify.org/) to use the project in a web browser
 
-5. `npm install -g browserify`
-6. `browserify main.js -o bundle.js`
+* `npm install -g browserify`
+* `browserify main.js -o bundle.js`
 
 And you should be ready to go!
