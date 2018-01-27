@@ -6,7 +6,7 @@ I thought it would help students if they could *see* how the algorithm works in 
 
 # Demo
 
-The live demo of the method is on http://jltmtz.github.io/efros-and-leung-js/. For some reason it runs way faster on Firefox compared to Chrome.
+The live demo of the method is on http://una-dinosauria.github.io/efros-and-leung-js/. For some reason it runs way faster on Firefox compared to Chrome.
 
 # Installation
 
