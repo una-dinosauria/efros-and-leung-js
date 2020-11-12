@@ -1,4 +1,6 @@
 # efros-and-leung-js
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Funa-dinosauria%2Fefros-and-leung-js.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Funa-dinosauria%2Fefros-and-leung-js?ref=badge_shield)
+
 
 On the winter of 2015 I was a TA for CPSC 425, the computer vision course for undergrads at UBC. One of the assignments in the course is to implement a simplified version of the algorithm described in "Texture Synthesis by Non-parametric Sampling", by Efros and Leung from ICCV 1999 [[pdf](https://www.eecs.berkeley.edu/Research/Projects/CS/vision/papers/efros-iccv99.pdf)].
 
@@ -28,3 +30,7 @@ Finally, export it with [browserify](http://browserify.org/) to use the project 
 * `browserify main.js -o bundle.js`
 
 And you should be ready to go!
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Funa-dinosauria%2Fefros-and-leung-js.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Funa-dinosauria%2Fefros-and-leung-js?ref=badge_large)
