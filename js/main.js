@@ -12,6 +12,7 @@ class TextureSynthesizer {
     this.patchL = options.patchL || 7;
     this.patchSize = 2 * this.patchL + 1;
     this.animationId = null;
+    this.stepsPerFrame = options.stepsPerFrame || 5;
 
     // Default texture region coordinates
     this.textureRegion = {
@@ -240,15 +241,20 @@ class TextureSynthesizer {
    * Animation loop using requestAnimationFrame
    */
   animate() {
-    const stepsPerFrame = 5; // Process multiple pixels per frame for speed
-
-    for (let i = 0; i < stepsPerFrame; i++) {
+    for (let i = 0; i < this.stepsPerFrame; i++) {
       if (!this.synthesisStep()) {
         return;
       }
     }
 
     this.animationId = requestAnimationFrame(() => this.animate());
+  }
+
+  /**
+   * Set the speed (pixels per frame)
+   */
+  setSpeed(stepsPerFrame) {
+    this.stepsPerFrame = Math.max(1, Math.min(50, stepsPerFrame));
   }
 
   /**
@@ -473,6 +479,9 @@ class TextureSynthesizer {
       // Setup texture interface
       this.createTextureInterface('texture_holder', this.donkeyImg);
 
+      // Setup speed slider
+      this.setupSpeedSlider();
+
       // Run initial synthesis
       const { x, y, w, h } = this.textureRegion;
       this.run(x, y, w, h);
@@ -481,6 +490,22 @@ class TextureSynthesizer {
       console.error('Initialization error:', error);
       this.showError(`Failed to initialize: ${error.message}`);
     }
+  }
+
+  /**
+   * Setup speed slider control
+   */
+  setupSpeedSlider() {
+    const slider = document.getElementById('speed-slider');
+    const valueDisplay = document.getElementById('speed-value');
+
+    if (!slider || !valueDisplay) return;
+
+    slider.addEventListener('input', (e) => {
+      const speed = parseInt(e.target.value, 10);
+      this.setSpeed(speed);
+      valueDisplay.textContent = `${speed} pixels/frame`;
+    });
   }
 }
 
