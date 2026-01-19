@@ -1,30 +1,120 @@
-# efros-and-leung-js
+# Efros and Leung Texture Synthesis in JavaScript
 
-On the winter of 2015 I was a TA for CPSC 425, the computer vision course for undergrads at UBC. One of the assignments in the course is to implement a simplified version of the algorithm described in "Texture Synthesis by Non-parametric Sampling", by Efros and Leung from ICCV 1999 [[pdf](https://www.eecs.berkeley.edu/Research/Projects/CS/vision/papers/efros-iccv99.pdf)].
+An interactive, browser-based implementation of the texture synthesis algorithm from ["Texture Synthesis by Non-parametric Sampling"](https://www.eecs.berkeley.edu/Research/Projects/CS/vision/papers/efros-iccv99.pdf) by Efros and Leung (ICCV 1999).
 
-I thought it would help students if they could *see* how the algorithm works in real time, so I decided to implement the method and a visualization of it on javascript.
+Originally created as a teaching visualization tool for CPSC 425 (Computer Vision) at UBC.
 
-# Demo
+## Demo
 
-The live demo of the method is on http://una-dinosauria.github.io/efros-and-leung-js/. For some reason it runs way faster on Firefox compared to Chrome.
+**[Live Demo](http://una-dinosauria.github.io/efros-and-leung-js/)**
 
-# Installation
+## Features
 
-Before doing anything, go ahead and install [node-js](https://nodejs.org/).
+- Real-time texture synthesis visualization
+- Interactive texture region selection (drag and resize)
+- Responsive design that works on desktop and mobile
+- No jQuery dependency (uses modern vanilla JavaScript)
 
-Now clone the project
+## How It Works
 
-* `git clone git@github.com:jltmtz/efros-and-leung-js.git`
-* `cd js`
+The algorithm fills a target region by finding similar patches from a source texture:
 
-Install the dependencies
+1. Find pixels at the edge of the filled region
+2. For each edge pixel, extract the surrounding context (patch)
+3. Search the texture region for the best matching patch using Sum of Squared Differences (SSD)
+4. Sample from the best matches with some randomness to avoid repetitive patterns
+5. Repeat until the entire region is filled
 
-* `npm install -i ndarray`
-* `npm install -i raphael`
+## Installation
 
-Finally, export it with [browserify](http://browserify.org/) to use the project in a web browser
+### Prerequisites
 
-* `npm install -g browserify`
-* `browserify main.js -o bundle.js`
+- [Node.js](https://nodejs.org/) (v16 or later recommended)
 
-And you should be ready to go!
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/una-dinosauria/efros-and-leung-js.git
+cd efros-and-leung-js
+
+# Install dependencies
+npm install
+
+# Build the bundle
+npm run build
+
+# Start a local server
+npm run serve
+```
+
+Then open http://localhost:3000 in your browser.
+
+### Development
+
+For development with auto-rebuild on changes:
+
+```bash
+npm run watch
+```
+
+In another terminal:
+
+```bash
+npm run serve
+```
+
+## Project Structure
+
+```
+efros-and-leung-js/
+├── index.html          # Main HTML file
+├── package.json        # Project dependencies and scripts
+├── js/
+│   ├── main.js        # Source code (ES6+ class-based)
+│   └── bundled.js     # Built bundle for browser
+└── imgs/
+    ├── donkey.jpg     # Sample source image
+    └── fill_region.png # Mask defining the fill region
+```
+
+## API
+
+The synthesizer is exposed globally and can be controlled programmatically:
+
+```javascript
+// Access the synthesizer instance
+window.synthesizer
+
+// Stop the current synthesis
+synthesizer.stop()
+
+// Run synthesis with custom texture region
+synthesizer.run(x, y, width, height)
+```
+
+## Configuration
+
+The `TextureSynthesizer` class accepts options:
+
+```javascript
+const synthesizer = new TextureSynthesizer({
+  patchL: 7  // Patch radius (default: 7, gives 15x15 patches)
+})
+```
+
+## Browser Support
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+
+## License
+
+MIT
+
+## Acknowledgments
+
+- Alexei Efros and Thomas Leung for the original algorithm
+- CPSC 425 at UBC for inspiring this visualization

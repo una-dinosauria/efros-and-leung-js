@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build outputs (keep bundled.js for GitHub Pages)
+# js/bundled.js
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+.idea/
+.vscode/
+*.sublime-*
+
+# Logs
+*.log
+npm-debug.log*
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
