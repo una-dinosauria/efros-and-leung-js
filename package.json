@@ -1,0 +1,34 @@
+{
+  "name": "efros-and-leung-js",
+  "version": "2.0.0",
+  "description": "Interactive texture synthesis using the Efros and Leung algorithm, running in your browser",
+  "main": "js/main.js",
+  "scripts": {
+    "build": "esbuild js/main.js --bundle --outfile=js/bundled.js --format=iife --minify",
+    "build:dev": "esbuild js/main.js --bundle --outfile=js/bundled.js --format=iife --sourcemap",
+    "watch": "esbuild js/main.js --bundle --outfile=js/bundled.js --format=iife --sourcemap --watch",
+    "serve": "npx serve .",
+    "dev": "npm run build:dev && npm run serve"
+  },
+  "keywords": [
+    "texture-synthesis",
+    "computer-vision",
+    "efros-leung",
+    "image-processing",
+    "canvas"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ndarray": "^1.0.19",
+    "raphael": "^2.3.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0",
+    "serve": "^14.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/una-dinosauria/efros-and-leung-js.git"
+  }
+}
