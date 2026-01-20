@@ -151,7 +151,7 @@
         [...popoverTriggerList].map(el => new bootstrap.Popover(el));
       });
     </script>
-    <!-- Application bundle -->
-    <script src="js/bundled.js"></script>
+    <!-- Application (ES module, no build step required) -->
+    <script type="module" src="js/main.js"></script>
   </body>
 </html>

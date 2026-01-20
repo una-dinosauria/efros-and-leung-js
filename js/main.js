@@ -1,5 +1,5 @@
-const ndarray = require('ndarray');
-const Raphael = require('raphael');
+import ndarray from 'https://esm.sh/ndarray@1.0.19';
+import Raphael from 'https://esm.sh/raphael@2.3.0';
 
 /**
  * Efros and Leung Texture Synthesis
@@ -7,7 +7,7 @@ const Raphael = require('raphael');
  * An interactive implementation of the texture synthesis algorithm from
  * "Texture Synthesis by Non-parametric Sampling" (ICCV 1999)
  */
-class TextureSynthesizer {
+export class TextureSynthesizer {
   constructor(options = {}) {
     this.patchL = options.patchL || 7;
     this.patchSize = 2 * this.patchL + 1;
@@ -510,18 +510,14 @@ class TextureSynthesizer {
 }
 
 // Initialize when DOM is ready
-if (typeof document !== 'undefined') {
-  const synthesizer = new TextureSynthesizer();
+const synthesizer = new TextureSynthesizer();
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => synthesizer.init());
-  } else {
-    synthesizer.init();
-  }
-
-  // Export for external use
-  window.TextureSynthesizer = TextureSynthesizer;
-  window.synthesizer = synthesizer;
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => synthesizer.init());
+} else {
+  synthesizer.init();
 }
 
-module.exports = TextureSynthesizer;
+// Export for external use
+window.TextureSynthesizer = TextureSynthesizer;
+window.synthesizer = synthesizer;
