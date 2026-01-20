@@ -70,16 +70,7 @@
   <body>
     <div class="container py-4">
       <header class="text-center mb-4">
-        <h1>
-          Efros and Leung Texture Synthesis
-          <button type="button" class="btn btn-link p-0 ms-2" style="font-size: 0.5em; vertical-align: super;"
-                  data-bs-toggle="popover"
-                  data-bs-trigger="hover focus"
-                  data-bs-placement="bottom"
-                  data-bs-content="This demo fills in a missing region of an image by sampling pixels from a texture. Drag the purple box on the right to select which texture to use. The algorithm finds matching patches and copies them pixel-by-pixel.">
-            <span class="badge rounded-pill bg-secondary">?</span>
-          </button>
-        </h1>
+        <h1>Efros and Leung Texture Synthesis</h1>
         <p class="lead text-muted">Running in your browser!</p>
       </header>
 
@@ -110,7 +101,16 @@
             </div>
             <div class="mt-3">
               <label for="speed-slider" class="form-label d-flex justify-content-between">
-                <span>Speed</span>
+                <span>
+                  Speed
+                  <button type="button" class="btn btn-link p-0 ms-1" style="font-size: 0.8em;"
+                          data-bs-toggle="popover"
+                          data-bs-trigger="hover focus"
+                          data-bs-placement="top"
+                          data-bs-content="Controls how many pixels are filled per animation frame. Higher values = faster synthesis.">
+                    <span class="badge rounded-pill bg-secondary">?</span>
+                  </button>
+                </span>
                 <span id="speed-value">5 pixels/frame</span>
               </label>
               <input type="range" class="form-range" id="speed-slider" min="1" max="50" value="5">
