@@ -90,11 +90,11 @@ export class TextureSynthesizer {
    */
   countPixToFill(toFill) {
     let pixCount = 0;
-    const data = toFill.data;
-    const len = data.length;
-    for (let i = 0; i < len; i++) {
-      if (data[i] !== 0) {
-        pixCount++;
+    for (let y = 0; y < toFill.shape[0]; y++) {
+      for (let x = 0; x < toFill.shape[1]; x++) {
+        if (toFill.get(y, x) !== 0) {
+          pixCount++;
+        }
       }
     }
     return pixCount;
