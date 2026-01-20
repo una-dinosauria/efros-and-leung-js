@@ -47,58 +47,20 @@ export class TextureSynthesizer {
   }
 
   /**
-   * Count known neighbors for a pixel (used for priority-based filling)
+   * Get a random non-zero element from a 2D matrix
    */
-  countKnownNeighbors(y, x, mask, w, h) {
-    let count = 0;
-    const plen = this.patchL;
-
-    for (let dy = -plen; dy <= plen; dy++) {
-      for (let dx = -plen; dx <= plen; dx++) {
-        const ny = y + dy;
-        const nx = x + dx;
-        if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
-          if (mask.get(ny, nx) === 0) {
-            count++;
-          }
+  getRandNonZero(matrix, w, h) {
+    const nonzeros = [];
+    for (let i = 0; i < h; i++) {
+      for (let j = 0; j < w; j++) {
+        if (matrix.get(i, j) !== 0) {
+          nonzeros.push({ y: i, x: j });
         }
       }
     }
-    return count;
-  }
-
-  /**
-   * Build priority queue of edge pixels sorted by number of known neighbors
-   */
-  buildEdgeQueue(wholeMask, w, h) {
-    const edges = [];
-
-    for (let y = 4; y < h - 4; y++) {
-      for (let x = 4; x < w - 4; x++) {
-        if (wholeMask.get(y, x) !== 0) {
-          // Check if this is an edge pixel
-          if (wholeMask.get(y - 1, x) === 0 ||
-              wholeMask.get(y + 1, x) === 0 ||
-              wholeMask.get(y, x - 1) === 0 ||
-              wholeMask.get(y, x + 1) === 0) {
-            const priority = this.countKnownNeighbors(y, x, wholeMask, w, h);
-            edges.push({ y, x, priority });
-          }
-        }
-      }
-    }
-
-    // Sort by priority (most known neighbors first)
-    edges.sort((a, b) => b.priority - a.priority);
-    return edges;
-  }
-
-  /**
-   * Get next edge pixel with highest priority
-   */
-  getNextEdge() {
-    if (this.edgeQueue.length === 0) return null;
-    return this.edgeQueue.shift();
+    if (nonzeros.length === 0) return null;
+    const idx = Math.floor(Math.random() * nonzeros.length);
+    return nonzeros[idx];
   }
 
   /**
@@ -378,9 +340,9 @@ export class TextureSynthesizer {
     // Update mask
     this.fillMask.set(this.edge.y, this.edge.x, 0);
 
-    // Rebuild edge queue with updated priorities
-    this.edgeQueue = this.buildEdgeQueue(this.fillMask, this.fillImg.width, this.fillImg.height);
-    this.edge = this.getNextEdge();
+    // Find next edge pixel (random selection)
+    this.edgeMask = this.getEdgeMask(this.fillMask, this.fillImg.width, this.fillImg.height);
+    this.edge = this.getRandNonZero(this.edgeMask, this.fillImg.width, this.fillImg.height);
 
     return this.edge !== null;
   }
@@ -451,9 +413,9 @@ export class TextureSynthesizer {
     this.totalPix = this.countPixToFill(this.fillMask);
     this.pixsToFill = this.totalPix;
 
-    // Build priority queue and get first edge pixel
-    this.edgeQueue = this.buildEdgeQueue(this.fillMask, this.fillImg.width, this.fillImg.height);
-    this.edge = this.getNextEdge();
+    // Find initial edge pixel (random selection)
+    this.edgeMask = this.getEdgeMask(this.fillMask, this.fillImg.width, this.fillImg.height);
+    this.edge = this.getRandNonZero(this.edgeMask, this.fillImg.width, this.fillImg.height);
 
     // Start animation
     this.updateProgress(0);
