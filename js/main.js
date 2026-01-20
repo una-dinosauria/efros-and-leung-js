@@ -13,6 +13,8 @@ export class TextureSynthesizer {
     this.patchSize = 2 * this.patchL + 1;
     this.animationId = null;
     this.stepsPerFrame = options.stepsPerFrame || 5;
+    this.isPaused = false;
+    this.isComplete = false;
 
     // Default texture region coordinates
     this.textureRegion = {
@@ -39,6 +41,64 @@ export class TextureSynthesizer {
     this.textureValues = null;
     this.raphaelCanvas = null;
     this.shapes = [];
+
+    // Priority queue for edge pixels (pixels with most known neighbors first)
+    this.edgeQueue = [];
+  }
+
+  /**
+   * Count known neighbors for a pixel (used for priority-based filling)
+   */
+  countKnownNeighbors(y, x, mask, w, h) {
+    let count = 0;
+    const plen = this.patchL;
+
+    for (let dy = -plen; dy <= plen; dy++) {
+      for (let dx = -plen; dx <= plen; dx++) {
+        const ny = y + dy;
+        const nx = x + dx;
+        if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
+          if (mask.get(ny, nx) === 0) {
+            count++;
+          }
+        }
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Build priority queue of edge pixels sorted by number of known neighbors
+   */
+  buildEdgeQueue(wholeMask, w, h) {
+    const edges = [];
+
+    for (let y = 4; y < h - 4; y++) {
+      for (let x = 4; x < w - 4; x++) {
+        if (wholeMask.get(y, x) !== 0) {
+          // Check if this is an edge pixel
+          if (wholeMask.get(y - 1, x) === 0 ||
+              wholeMask.get(y + 1, x) === 0 ||
+              wholeMask.get(y, x - 1) === 0 ||
+              wholeMask.get(y, x + 1) === 0) {
+            const priority = this.countKnownNeighbors(y, x, wholeMask, w, h);
+            edges.push({ y, x, priority });
+          }
+        }
+      }
+    }
+
+    // Sort by priority (most known neighbors first)
+    edges.sort((a, b) => b.priority - a.priority);
+    return edges;
+  }
+
+  /**
+   * Get next edge pixel with highest priority
+   */
+  getNextEdge() {
+    if (this.edgeQueue.length === 0) return null;
+    return this.edgeQueue.shift();
   }
 
   /**
@@ -68,56 +128,69 @@ export class TextureSynthesizer {
    */
   countPixToFill(toFill) {
     let pixCount = 0;
-    for (let y = 0; y < toFill.shape[0]; y++) {
-      for (let x = 0; x < toFill.shape[1]; x++) {
-        if (toFill.get(y, x) !== 0) {
-          pixCount++;
-        }
+    const data = toFill.data;
+    const len = data.length;
+    for (let i = 0; i < len; i++) {
+      if (data[i] !== 0) {
+        pixCount++;
       }
     }
     return pixCount;
   }
 
   /**
-   * Get a random non-zero element from a 2D matrix
-   */
-  getRandNonZero(matrix, w, h) {
-    const nonzeros = [];
-    for (let i = 0; i < h; i++) {
-      for (let j = 0; j < w; j++) {
-        if (matrix.get(i, j) !== 0) {
-          nonzeros.push({ y: i, x: j });
-        }
-      }
-    }
-    if (nonzeros.length === 0) return null;
-    const idx = Math.floor(Math.random() * nonzeros.length);
-    return nonzeros[idx];
-  }
-
-  /**
-   * Compute the Sum of Squared Differences between a patch and image region
+   * Compute SSD using optimized direct array access
    */
   getSSD(mask, patch, plen, region, rw, rh) {
     const ssdW = rw - 2 * plen;
     const ssdH = rh - 2 * plen;
-    const ssd = ndarray(new Uint32Array(ssdW * ssdH), [ssdH, ssdW]);
+    const ssd = new Uint32Array(ssdW * ssdH);
+
+    const maskData = mask.data;
+    const maskStride0 = mask.stride[0];
+    const maskStride1 = mask.stride[1];
+    const maskOffset = mask.offset;
+
+    const patchData = patch.data;
+    const patchStride0 = patch.stride[0];
+    const patchStride1 = patch.stride[1];
+    const patchStride2 = patch.stride[2];
+    const patchOffset = patch.offset;
+
+    const regionData = region.data;
+    const regionStride0 = region.stride[0];
+    const regionStride1 = region.stride[1];
+    const regionStride2 = region.stride[2];
+    const regionOffset = region.offset;
+
+    const patchSize = 2 * plen + 1;
 
     for (let i = plen; i < rh - plen; i++) {
       for (let j = plen; j < rw - plen; j++) {
-        for (let k = -plen; k < plen + 1; k++) {
-          for (let l = -plen; l < plen + 1; l++) {
-            if (mask.get(k + plen, l + plen) === 0) {
-              const rDiff = patch.get(k + plen, l + plen, 0) - region.get(i + k, j + l, 0);
-              const gDiff = patch.get(k + plen, l + plen, 1) - region.get(i + k, j + l, 1);
-              const bDiff = patch.get(k + plen, l + plen, 2) - region.get(i + k, j + l, 2);
-              ssd.set(i - plen, j - plen, ssd.get(i - plen, j - plen) + rDiff * rDiff + gDiff * gDiff + bDiff * bDiff);
+        let sum = 0;
+
+        for (let k = -plen; k <= plen; k++) {
+          for (let l = -plen; l <= plen; l++) {
+            const maskIdx = maskOffset + (k + plen) * maskStride0 + (l + plen) * maskStride1;
+
+            if (maskData[maskIdx] === 0) {
+              const patchIdx = patchOffset + (k + plen) * patchStride0 + (l + plen) * patchStride1;
+              const regionIdx = regionOffset + (i + k) * regionStride0 + (j + l) * regionStride1;
+
+              const rDiff = patchData[patchIdx] - regionData[regionIdx];
+              const gDiff = patchData[patchIdx + patchStride2] - regionData[regionIdx + regionStride2];
+              const bDiff = patchData[patchIdx + 2 * patchStride2] - regionData[regionIdx + 2 * regionStride2];
+
+              sum += rDiff * rDiff + gDiff * gDiff + bDiff * bDiff;
             }
           }
         }
+
+        ssd[(i - plen) * ssdW + (j - plen)] = sum;
       }
     }
-    return ssd;
+
+    return { data: ssd, width: ssdW, height: ssdH };
   }
 
   /**
@@ -142,9 +215,9 @@ export class TextureSynthesizer {
       progressBar.setAttribute('aria-valuenow', value);
       progressBar.textContent = `${value}%`;
       if (value >= 100) {
-        progressBar.classList.remove('active');
+        progressBar.classList.remove('progress-bar-animated');
       } else {
-        progressBar.classList.add('active');
+        progressBar.classList.add('progress-bar-animated');
       }
     }
   }
@@ -160,11 +233,84 @@ export class TextureSynthesizer {
   }
 
   /**
+   * Pause synthesis
+   */
+  pause() {
+    this.isPaused = true;
+    this.stop();
+    this.updatePauseButton();
+  }
+
+  /**
+   * Resume synthesis
+   */
+  resume() {
+    if (this.isComplete) return;
+    this.isPaused = false;
+    this.updatePauseButton();
+    this.animate();
+  }
+
+  /**
+   * Toggle pause/resume
+   */
+  togglePause() {
+    if (this.isPaused) {
+      this.resume();
+    } else {
+      this.pause();
+    }
+  }
+
+  /**
+   * Update pause button text
+   */
+  updatePauseButton() {
+    const pauseIcon = document.getElementById('pause-icon');
+    const pauseText = document.getElementById('pause-text');
+    if (pauseIcon && pauseText) {
+      if (this.isPaused) {
+        pauseIcon.textContent = '▶';
+        pauseText.textContent = 'Resume';
+      } else {
+        pauseIcon.textContent = '⏸';
+        pauseText.textContent = 'Pause';
+      }
+    }
+  }
+
+  /**
+   * Reset and restart synthesis
+   */
+  reset() {
+    this.stop();
+    this.isPaused = false;
+    this.isComplete = false;
+    this.updatePauseButton();
+    const { x, y, w, h } = this.textureRegion;
+    this.run(x, y, w, h);
+  }
+
+  /**
+   * Download the current result as PNG
+   */
+  download() {
+    const canvas = document.getElementById('fill_canvas');
+    if (!canvas) return;
+
+    const link = document.createElement('a');
+    link.download = 'texture-synthesis-result.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  /**
    * Run one step of the synthesis algorithm
    */
   synthesisStep() {
-    if (this.pixsToFill <= 1) {
+    if (this.pixsToFill <= 1 || !this.edge) {
       this.updateProgress(100);
+      this.isComplete = true;
       return false;
     }
 
@@ -195,7 +341,7 @@ export class TextureSynthesizer {
     );
 
     // Sort SSD values
-    const ssdCopy = Array.from(new Uint32Array(ssd.data)).sort((a, b) => a - b);
+    const ssdCopy = Array.from(ssd.data).sort((a, b) => a - b);
 
     // Sample from gaussian using Box-Muller transform
     const r = Math.sqrt(-2 * Math.log(Math.random()));
@@ -208,21 +354,23 @@ export class TextureSynthesizer {
 
     // Find matching location
     let matchX = 0, matchY = 0;
-    outer:
-    for (let i = 0; i < ssd.shape[0]; i++) {
-      for (let j = 0; j < ssd.shape[1]; j++) {
-        if (ssd.get(i, j) === ssdValue) {
+    for (let i = 0; i < ssd.height; i++) {
+      for (let j = 0; j < ssd.width; j++) {
+        if (ssd.data[i * ssd.width + j] === ssdValue) {
           matchY = i;
           matchX = j;
-          break outer;
+          i = ssd.height; // break outer
+          break;
         }
       }
     }
 
     // Copy texture pixel to fill location
-    this.fillPix.set(this.edge.y, this.edge.x, 0, this.textureValues.get(matchY + this.patchL, matchX + this.patchL, 0));
-    this.fillPix.set(this.edge.y, this.edge.x, 1, this.textureValues.get(matchY + this.patchL, matchX + this.patchL, 1));
-    this.fillPix.set(this.edge.y, this.edge.x, 2, this.textureValues.get(matchY + this.patchL, matchX + this.patchL, 2));
+    const srcY = matchY + this.patchL;
+    const srcX = matchX + this.patchL;
+    this.fillPix.set(this.edge.y, this.edge.x, 0, this.textureValues.get(srcY, srcX, 0));
+    this.fillPix.set(this.edge.y, this.edge.x, 1, this.textureValues.get(srcY, srcX, 1));
+    this.fillPix.set(this.edge.y, this.edge.x, 2, this.textureValues.get(srcY, srcX, 2));
 
     // Update display
     this.fillCtx.putImageData(this.fillImdata, 0, 0);
@@ -230,9 +378,9 @@ export class TextureSynthesizer {
     // Update mask
     this.fillMask.set(this.edge.y, this.edge.x, 0);
 
-    // Find next edge pixel
-    this.edgeMask = this.getEdgeMask(this.fillMask, this.fillImg.width, this.fillImg.height);
-    this.edge = this.getRandNonZero(this.edgeMask, this.fillImg.width, this.fillImg.height);
+    // Rebuild edge queue with updated priorities
+    this.edgeQueue = this.buildEdgeQueue(this.fillMask, this.fillImg.width, this.fillImg.height);
+    this.edge = this.getNextEdge();
 
     return this.edge !== null;
   }
@@ -241,6 +389,8 @@ export class TextureSynthesizer {
    * Animation loop using requestAnimationFrame
    */
   animate() {
+    if (this.isPaused) return;
+
     for (let i = 0; i < this.stepsPerFrame; i++) {
       if (!this.synthesisStep()) {
         return;
@@ -262,6 +412,9 @@ export class TextureSynthesizer {
    */
   run(textX, textY, textW, textH) {
     this.stop();
+    this.isComplete = false;
+    this.isPaused = false;
+    this.updatePauseButton();
 
     this.textureRegion = { x: textX, y: textY, w: textW, h: textH };
 
@@ -298,9 +451,9 @@ export class TextureSynthesizer {
     this.totalPix = this.countPixToFill(this.fillMask);
     this.pixsToFill = this.totalPix;
 
-    // Find initial edge
-    this.edgeMask = this.getEdgeMask(this.fillMask, this.fillImg.width, this.fillImg.height);
-    this.edge = this.getRandNonZero(this.edgeMask, this.fillImg.width, this.fillImg.height);
+    // Build priority queue and get first edge pixel
+    this.edgeQueue = this.buildEdgeQueue(this.fillMask, this.fillImg.width, this.fillImg.height);
+    this.edge = this.getNextEdge();
 
     // Start animation
     this.updateProgress(0);
@@ -479,8 +632,9 @@ export class TextureSynthesizer {
       // Setup texture interface
       this.createTextureInterface('texture_holder', this.donkeyImg);
 
-      // Setup speed slider
+      // Setup controls
       this.setupSpeedSlider();
+      this.setupControlButtons();
 
       // Run initial synthesis
       const { x, y, w, h } = this.textureRegion;
@@ -506,6 +660,25 @@ export class TextureSynthesizer {
       this.setSpeed(speed);
       valueDisplay.textContent = `${speed} pixels/frame`;
     });
+  }
+
+  /**
+   * Setup control buttons (pause, reset, download)
+   */
+  setupControlButtons() {
+    const pauseBtn = document.getElementById('pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const downloadBtn = document.getElementById('download-btn');
+
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', () => this.togglePause());
+    }
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => this.reset());
+    }
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => this.download());
+    }
   }
 }
 
